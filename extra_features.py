@@ -2,6 +2,8 @@ import os
 import cv2
 import torch
 import numpy as np
+import csv
+from datetime import datetime
 from ultralytics import YOLO
 
 # Load the YOLO model
@@ -16,7 +18,11 @@ VIDEO_DIR = os.getcwd()
 input_video_path = os.path.join(VIDEO_DIR, "AI Intern Video Tech Task.mp4")
 
 # Define output video file path
-output_video_path = os.path.join(VIDEO_DIR, "output_video.mp4")
+output_video_path = os.path.join(VIDEO_DIR, "extra_features_output_video.mp4")
+
+# Define CSV file paths
+cashier_csv_path = os.path.join(VIDEO_DIR, "cashier_monitoring.csv")
+people_csv_path = os.path.join(VIDEO_DIR, "people_count.csv")
 
 # Open the video file
 cap = cv2.VideoCapture(input_video_path)
@@ -59,9 +65,19 @@ polygon_vertices = np.array([
 # Timer for counting the duration when no person is in the specified area
 no_person_frame_count = 0
 no_person_duration = 0
+absence_start_time = None
 
 # Flag to enable or disable cashier monitoring
 cashier_monitoring_enabled = False
+
+# CSV headers
+with open(cashier_csv_path, mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(["Start Time", "End Time", "Duration (seconds)", "People Count", "Location"])
+
+with open(people_csv_path, mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(["Time", "Number of People", "Location"])
 
 # Function to handle button click events
 def toggle_cashier_monitoring(event, x, y, flags, param):
@@ -140,11 +156,32 @@ while True:
                 person_in_excluded_area = True
 
     # Update the frame count for the duration when no person is in the excluded area
+    current_time = datetime.now()
     if person_in_excluded_area:
         no_person_frame_count = 0
+        if absence_start_time:
+            # Record absence end time and duration
+            absence_end_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
+            absence_duration = no_person_duration
+            if absence_duration >= 5:
+                with open(cashier_csv_path, mode='a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow([absence_start_time, absence_end_time, round(absence_duration, 2), person_count, "main hall"])
+                    absence_logged = True
+            absence_start_time = None
     else:
         no_person_frame_count += 1
         no_person_duration = no_person_frame_count / fps
+        if not absence_start_time:
+            # Record absence start time
+            absence_start_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Log the people count every 5 seconds
+    if int(cap.get(cv2.CAP_PROP_POS_FRAMES)) % int(fps * 5) == 0:
+        with open(people_csv_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
+            writer.writerow([time_str, person_count, "main hall"])
 
     # Display the person count on the top left of the frame
     cv2.putText(
@@ -181,9 +218,13 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
+
+
 # Release the video capture and writer objects
 cap.release()
 out.release()
 cv2.destroyAllWindows()
 
 print("Output video saved to:", output_video_path)
+print("Cashier log saved to:", cashier_csv_path)
+print("People count log saved to:", people_csv_path)
