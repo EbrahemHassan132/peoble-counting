@@ -62,13 +62,9 @@ while True:
     if not ret:
         break
 
-    # Draw the polygon around the excluded region
+    # Draw the polygon around the excluded region, Run YOLO on the frame and Initialize person count
     cv2.polylines(frame, [polygon_vertices], isClosed=True, color=(0, 0, 255), thickness=4)
-
-    # Run YOLO on the frame
     results = model(frame)
-
-    # Initialize person count
     person_count = 0
 
     # Draw bounding boxes and labels on the frame for detections within the polygon

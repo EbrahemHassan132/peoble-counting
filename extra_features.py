@@ -84,7 +84,7 @@ def toggle_cashier_monitoring(event, x, y, flags, param):
     global cashier_monitoring_enabled
     if event == cv2.EVENT_LBUTTONDOWN:
         button_width = cv2.getTextSize(button_text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0][0] + 40
-        if 20 <= x <= 20 + button_width and 20 <= y <= 50:  # Button coordinates
+        if 20 <= x <= 20 + button_width and 20 <= y <= 50:
             cashier_monitoring_enabled = not cashier_monitoring_enabled
 
 # Create a named window and set mouse callback
@@ -97,7 +97,7 @@ while True:
     if not ret:
         break
 
-    # Draw the polygon around the excluded region
+    # Draw the polygon around the targetted region
     cv2.polylines(frame, [polygon_vertices], isClosed=True, color=(0, 0, 255), thickness=4)
 
     # Draw the button
@@ -109,10 +109,8 @@ while True:
     cv2.rectangle(frame, (20, 20), ( button_width, 10 + button_height), button_color, -1)
     cv2.putText(frame, button_text, (30, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-    # Run YOLO on the frame
+    # Run YOLO on the frame and Initialize person count
     results = model(frame)
-
-    # Initialize person count
     person_count = 0
     person_in_excluded_area = False
 
